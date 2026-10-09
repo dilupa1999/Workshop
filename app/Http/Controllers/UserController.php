@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
+use App\Models\AuditLog;
 
 class UserController extends Controller
 {
@@ -36,6 +37,14 @@ class UserController extends Controller
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
         ]);
+
+        AuditLog::create([
+    'user_id' => auth()->id(),
+    'action' => 'USER_CREATED',
+    'auditable_type' => User::class,
+    'auditable_id' => $user->id,
+    'description' => "Created staff account for '{$user->name}' with role '{$validated['role']}'",
+]);
 
         $user->assignRole($validated['role']);
 

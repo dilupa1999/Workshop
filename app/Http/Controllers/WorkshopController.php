@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Workshop;
 use Illuminate\Http\Request;
 
@@ -50,14 +51,28 @@ class WorkshopController extends Controller
             'status' => ['required', 'in:scheduled,in_progress,completed,cancelled'],
         ]);
 
-        Workshop::create($validated);
+        $workshop = Workshop::create($validated);
+
+        // Audit Log entry
+        AuditLog::create([
+            'user_id' => auth()->id(),
+            'action' => 'WORKSHOP_CREATED',
+            'auditable_type' => Workshop::class,
+            'auditable_id' => $workshop->id,
+            'description' => "Created new workshop '{$workshop->title}' ({$workshop->code}) with capacity {$workshop->capacity}",
+        ]);
 
         return redirect()->route('workshops.index')->with('success', 'Workshop created successfully.');
     }
 
     public function show(Workshop $workshop)
     {
-        $workshop->load(['registrations.registeredByUser', 'registrations.cancelledByUser']);
+        $workshop->load([
+            'registrations.registeredByUser',
+            'registrations.cancelledByUser',
+            'auditLogs.user'
+        ]);
+
         return view('workshops.show', compact('workshop'));
     }
 
@@ -77,7 +92,26 @@ class WorkshopController extends Controller
             'status' => ['required', 'in:scheduled,in_progress,completed,cancelled'],
         ]);
 
-        $workshop->update($validated);
+        // Capture attribute differences for Audit Trail
+        $workshop->fill($validated);
+        $dirtyChanges = $workshop->getDirty();
+        $originalValues = array_intersect_key($workshop->getOriginal(), $dirtyChanges);
+
+        $workshop->save();
+
+        if (!empty($dirtyChanges)) {
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'WORKSHOP_UPDATED',
+                'auditable_type' => Workshop::class,
+                'auditable_id' => $workshop->id,
+                'description' => "Modified workshop details for '{$workshop->title}'",
+                'changes' => [
+                    'before' => $originalValues,
+                    'after' => $dirtyChanges,
+                ],
+            ]);
+        }
 
         return redirect()->route('workshops.show', $workshop)->with('success', 'Workshop updated successfully.');
     }

@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 class RegistrationController extends Controller
 {
     /**
-     * Register attendee with pessimistic locking to prevent overbooking.
+     * Register attendee or queue into waitlist if capacity is reached.
      */
     public function store(Request $request, Workshop $workshop)
     {
@@ -21,48 +21,61 @@ class RegistrationController extends Controller
             'attendee_email' => ['required', 'email', 'max:255'],
         ]);
 
+        $message = '';
+
         try {
-            DB::transaction(function () use ($validated, $workshop) {
-                // Lock the workshop row to handle concurrent submissions
+            DB::transaction(function () use ($validated, $workshop, &$message) {
+                // Concurrency lock on workshop row
                 $lockedWorkshop = Workshop::where('id', $workshop->id)
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                // Recalculate active registrations inside the transaction
+                // Check active count
                 $currentActiveCount = Registration::where('workshop_id', $lockedWorkshop->id)
                     ->where('status', 'active')
                     ->lockForUpdate()
                     ->count();
 
-                if ($currentActiveCount >= $lockedWorkshop->capacity) {
-                    throw ValidationException::withMessages([
-                        'capacity' => 'Registration failed: This workshop is completely full.',
-                    ]);
-                }
-
-                // Prevent duplicate active registration for the same email
-                $existingActive = Registration::where('workshop_id', $lockedWorkshop->id)
+                // Prevent duplicate active or waitlisted registrations for same email
+                $existing = Registration::where('workshop_id', $lockedWorkshop->id)
                     ->where('attendee_email', $validated['attendee_email'])
-                    ->where('status', 'active')
+                    ->whereIn('status', ['active', 'waitlisted'])
                     ->exists();
 
-                if ($existingActive) {
+                if ($existing) {
                     throw ValidationException::withMessages([
-                        'attendee_email' => 'This attendee is already actively registered for this workshop.',
+                        'attendee_email' => 'This attendee already holds an active or waitlisted spot for this workshop.',
                     ]);
                 }
 
-                // Record registration with audit metadata
-                Registration::create([
-                    'workshop_id' => $lockedWorkshop->id,
-                    'attendee_name' => $validated['attendee_name'],
-                    'attendee_email' => $validated['attendee_email'],
-                    'status' => 'active',
-                    'registered_by' => Auth::id(),
-                ]);
+                // If seats are available -> Active Registration
+                if ($currentActiveCount < $lockedWorkshop->capacity) {
+                    Registration::create([
+                        'workshop_id' => $lockedWorkshop->id,
+                        'attendee_name' => $validated['attendee_name'],
+                        'attendee_email' => $validated['attendee_email'],
+                        'status' => 'active',
+                        'registered_by' => Auth::id(),
+                    ]);
+                    $message = 'Attendee registered successfully!';
+                } else {
+                    // Capacity Full -> Add to Waitlist Queue
+                    $waitlistPosition = Registration::where('workshop_id', $lockedWorkshop->id)
+                        ->where('status', 'waitlisted')
+                        ->count() + 1;
+
+                    Registration::create([
+                        'workshop_id' => $lockedWorkshop->id,
+                        'attendee_name' => $validated['attendee_name'],
+                        'attendee_email' => $validated['attendee_email'],
+                        'status' => 'waitlisted',
+                        'registered_by' => Auth::id(),
+                    ]);
+                    $message = "Workshop is at full capacity. Attendee added to Waitlist at position #{$waitlistPosition}.";
+                }
             });
 
-            return redirect()->route('workshops.show', $workshop)->with('success', 'Attendee registered successfully.');
+            return redirect()->route('workshops.show', $workshop)->with('success', $message);
 
         } catch (ValidationException $e) {
             return back()->withErrors($e->errors())->withInput();
@@ -70,7 +83,7 @@ class RegistrationController extends Controller
     }
 
     /**
-     * Cancel an attendee registration without deleting the record.
+     * Cancel an active registration and automatically promote the next waitlisted attendee.
      */
     public function cancel(Registration $registration)
     {
@@ -78,12 +91,41 @@ class RegistrationController extends Controller
             return back()->with('error', 'This registration is already cancelled.');
         }
 
-        $registration->update([
-            'status' => 'cancelled',
-            'cancelled_by' => Auth::id(),
-            'cancelled_at' => now(),
-        ]);
+        $promotedAttendee = null;
 
-        return back()->with('success', 'Registration cancelled. The seat has been freed.');
+        DB::transaction(function () use ($registration, &$promotedAttendee) {
+            $workshopId = $registration->workshop_id;
+
+            // 1. Cancel active or waitlisted seat
+            $wasActive = ($registration->status === 'active');
+            $registration->update([
+                'status' => 'cancelled',
+                'cancelled_by' => Auth::id(),
+                'cancelled_at' => now(),
+            ]);
+
+            // 2. If an active seat was freed, check waitlist queue
+            if ($wasActive) {
+                $nextInQueue = Registration::where('workshop_id', $workshopId)
+                    ->where('status', 'waitlisted')
+                    ->orderBy('created_at', 'asc')
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($nextInQueue) {
+                    $nextInQueue->update([
+                        'status' => 'active',
+                    ]);
+                    $promotedAttendee = $nextInQueue->attendee_name;
+                }
+            }
+        });
+
+        $successMsg = 'Registration cancelled. The seat has been freed.';
+        if ($promotedAttendee) {
+            $successMsg .= " Waitlisted attendee [{$promotedAttendee}] was automatically moved up to an Active Seat!";
+        }
+
+        return back()->with('success', $successMsg);
     }
 }

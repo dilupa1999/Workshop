@@ -39,4 +39,22 @@ class Workshop extends Model
     {
         return max(0, $this->capacity - $this->activeRegistrations()->count());
     }
+
+    // app/Models/Workshop.php ඇතුළට එක් කරන්න:
+
+public function waitlistedRegistrations(): HasMany
+{
+    return $this->hasMany(Registration::class)->where('status', 'waitlisted')->orderBy('created_at', 'asc');
+}
+
+public function getWaitlistCountAttribute(): int
+{
+    return $this->waitlistedRegistrations()->count();
+}
+
+
+public function auditLogs()
+{
+    return $this->morphMany(AuditLog::class, 'auditable')->latest();
+}
 }
