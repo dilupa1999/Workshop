@@ -12,12 +12,12 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Roles නිර්මාණය කිරීම
+       
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $managerRole = Role::firstOrCreate(['name' => 'manager']);
         $staffRole = Role::firstOrCreate(['name' => 'staff']);
 
-        // 2. Initial Accounts
+    
         $admin = User::firstOrCreate(
             ['email' => 'admin@workshop.com'],
             ['name' => 'System Admin', 'password' => Hash::make('Admin@1234')]

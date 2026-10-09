@@ -41,7 +41,7 @@ class Workshop extends Model
         return max(0, $this->capacity - $this->activeRegistrations()->count());
     }
 
-    // app/Models/Workshop.php ඇතුළට එක් කරන්න:
+   
 
 public function waitlistedRegistrations(): HasMany
 {
