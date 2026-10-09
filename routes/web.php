@@ -14,10 +14,16 @@ Route::middleware([
     'verified',
 ])->group(function () {
 
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+  Route::get('/dashboard', function () {
+    $stats = [
+        'total_workshops'      => \App\Models\Workshop::count(),
+        'scheduled_workshops'  => \App\Models\Workshop::where('status', 'scheduled')->count(),
+        'active_registrations' => \App\Models\Registration::where('status', 'active')->count(),
+        'waitlisted_attendees' => \App\Models\Registration::where('status', 'waitlisted')->count(),
+    ];
 
+    return view('dashboard', compact('stats'));
+})->middleware(['auth', 'verified'])->name('dashboard');
     // -------------------------------------------------------------------------
     // 1. ADMIN ONLY: Manage Users & Roles (Workshops are forbidden)
     // -------------------------------------------------------------------------

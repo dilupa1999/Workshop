@@ -21,6 +21,13 @@
             <!-- Search & Filters (Updated to 5 columns for Location) -->
             <div class="bg-white p-6 rounded-lg shadow">
                 <form method="GET" action="{{ route('workshops.index') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                   
+                   <div class="md:col-span-2">
+    <label class="block text-xs font-semibold text-gray-600 uppercase">Search</label>
+    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by title, code, instructor..." class="mt-1 w-full rounded-md border-gray-300 text-sm">
+</div>
+                   
+                   
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase">Start Date</label>
                         <input type="date" name="start_date" value="{{ request('start_date') }}" class="mt-1 w-full rounded-md border-gray-300 text-sm">

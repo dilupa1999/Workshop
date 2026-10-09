@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\AuditLog;
 use App\Models\Workshop;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class WorkshopController extends Controller
 {
@@ -12,12 +13,22 @@ class WorkshopController extends Controller
     {
         $query = Workshop::withCount(['activeRegistrations']);
 
-        // 1. Filter by Status
+        // 1. Filter by Keyword (Title, Code, Instructor) - Newly integrated
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%")
+                  ->orWhere('instructor', 'like', "%{$search}%");
+            });
+        }
+
+        // 2. Filter by Status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // 2. Filter by Date Range
+        // 3. Filter by Date Range
         if ($request->filled('start_date')) {
             $query->whereDate('date_time', '>=', $request->start_date);
         }
@@ -25,12 +36,12 @@ class WorkshopController extends Controller
             $query->whereDate('date_time', '<=', $request->end_date);
         }
 
-        // 3. Filter by Location (Newly Added)
+        // 4. Filter by Location
         if ($request->filled('location')) {
             $query->where('location', $request->location);
         }
 
-        // 4. Filter by Available Seats
+        // 5. Filter by Available Seats
         if ($request->boolean('available_only')) {
             $query->havingRaw('capacity > active_registrations_count');
         }
@@ -51,7 +62,7 @@ class WorkshopController extends Controller
             'code' => ['required', 'string', 'max:50', 'unique:workshops,code'],
             'title' => ['required', 'string', 'max:255'],
             'instructor' => ['required', 'string', 'max:255'],
-            'location' => ['required', 'string', 'max:100'], // Newly Added
+            'location' => ['required', 'string', 'max:100'],
             'date_time' => ['required', 'date', 'after:now'],
             'capacity' => ['required', 'integer', 'min:1'],
             'status' => ['required', 'in:scheduled,in_progress,completed,cancelled'],
@@ -59,7 +70,6 @@ class WorkshopController extends Controller
 
         $workshop = Workshop::create($validated);
 
-        // Audit Log entry
         AuditLog::create([
             'user_id' => auth()->id(),
             'action' => 'WORKSHOP_CREATED',
@@ -93,7 +103,7 @@ class WorkshopController extends Controller
             'code' => ['required', 'string', 'max:50', 'unique:workshops,code,' . $workshop->id],
             'title' => ['required', 'string', 'max:255'],
             'instructor' => ['required', 'string', 'max:255'],
-            'location' => ['required', 'string', 'max:100'], // Newly Added
+            'location' => ['required', 'string', 'max:100'],
             'date_time' => ['required', 'date'],
             'capacity' => ['required', 'integer', 'min:1'],
             'status' => ['required', 'in:scheduled,in_progress,completed,cancelled'],
@@ -123,51 +133,45 @@ class WorkshopController extends Controller
         return redirect()->route('workshops.show', $workshop)->with('success', 'Workshop updated successfully.');
     }
 
+    public function exportAttendees(Workshop $workshop)
+    {
+        $fileName = 'attendees-' . Str::slug($workshop->code) . '-' . now()->format('Ymd_His') . '.csv';
 
-public function exportAttendees(Workshop $workshop)
-{
-    $fileName = 'attendees-' . \Illuminate\Support\Str::slug($workshop->code) . '-' . now()->format('Ymd_His') . '.csv';
+        $registrations = $workshop->registrations()
+            ->with(['registeredByUser', 'cancelledByUser'])
+            ->orderBy('created_at', 'asc')
+            ->get();
 
-    $registrations = $workshop->registrations()
-        ->with(['registeredByUser', 'cancelledByUser'])
-        ->orderBy('created_at', 'asc')
-        ->get();
+        $headers = [
+            "Content-type"        => "text/csv",
+            "Content-Disposition" => "attachment; filename=$fileName",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
 
-    $headers = [
-        "Content-type"        => "text/csv",
-        "Content-Disposition" => "attachment; filename=$fileName",
-        "Pragma"              => "no-cache",
-        "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
-        "Expires"             => "0"
-    ];
+        $callback = function () use ($registrations, $workshop) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Workshop Code', 'Workshop Title', 'Attendee Name', 'Attendee Email', 'Status', 'Registered At', 'Registered By', 'Cancellation Details']);
 
-    $callback = function () use ($registrations, $workshop) {
-        $file = fopen('php://output', 'w');
-        // CSV Header
-        fputcsv($file, ['Workshop Code', 'Workshop Title', 'Attendee Name', 'Attendee Email', 'Status', 'Registered At', 'Registered By', 'Cancellation Details']);
+            foreach ($registrations as $reg) {
+                fputcsv($file, [
+                    $workshop->code,
+                    $workshop->title,
+                    $reg->attendee_name,
+                    $reg->attendee_email,
+                    ucfirst($reg->status),
+                    $reg->created_at->format('Y-m-d H:i:s'),
+                    $reg->registeredByUser->name ?? 'System',
+                    $reg->status === 'cancelled' 
+                        ? ('Cancelled by ' . ($reg->cancelledByUser->name ?? 'Unknown') . ' on ' . ($reg->cancelled_at?->format('Y-m-d H:i') ?? 'N/A')) 
+                        : 'N/A'
+                ]);
+            }
 
-        foreach ($registrations as $reg) {
-            fputcsv($file, [
-                $workshop->code,
-                $workshop->title,
-                $reg->attendee_name,
-                $reg->attendee_email,
-                ucfirst($reg->status),
-                $reg->created_at->format('Y-m-d H:i:s'),
-                $reg->registeredByUser->name ?? 'System',
-                $reg->status === 'cancelled' 
-                    ? ('Cancelled by ' . ($reg->cancelledByUser->name ?? 'Unknown') . ' on ' . ($reg->cancelled_at?->format('Y-m-d H:i') ?? 'N/A')) 
-                    : 'N/A'
-            ]);
-        }
+            fclose($file);
+        };
 
-        fclose($file);
-    };
-
-    return response()->stream($callback, 200, $headers);
-}
-
-
-
-
+        return response()->stream($callback, 200, $headers);
+    }
 }
