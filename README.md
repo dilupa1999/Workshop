@@ -55,6 +55,41 @@ To prevent Time-of-Check to Time-of-Use (TOCTOU) race conditions when concurrent
 
 ---
 
+
+
+---
+
+## 🌟 Operational Tools & Productivity Enhancements
+
+Beyond the core assignment specifications, the following operational and enterprise-grade features were implemented to streamline day-to-day administrative workflows across the training centre:
+
+### 1. 📥 Attendee List CSV Export (Front Desk Tool)
+- **Instant Attendance Sheet Generation:** Front-desk staff and managers can download a complete attendee roster directly from any workshop's details page with a single click.
+- **Export Specifications:**
+  - Dynamic file naming: `attendees-[workshop-code]-[timestamp].csv`.
+  - Comprehensive field export: Workshop Code, Title, Attendee Name, Attendee Email, Registration Status (`Active`, `Waitlisted`, `Cancelled`), Registration Timestamp, Enrolling Staff Member, and detailed Cancellation metadata (who cancelled and when).
+  - Streamed response handling (`response()->stream()`) ensures minimal server memory footprint during large exports.
+
+### 2. 📊 Live Dashboard Analytics & Metric Cards
+- **Executive Summary at a Glance:** The authenticated dashboard renders four real-time analytical summary cards:
+  - **Total Workshops:** Aggregate count of all workshops registered across the 3 campuses.
+  - **Scheduled Active:** Number of workshops currently open for incoming bookings.
+  - **Confirmed Attendees:** Real-time seat occupancy count across all active sessions.
+  - **Waitlist Queue:** Total number of queued participants currently awaiting seat cancellations for automatic promotion.
+- Built with zero-exception fallback logic ensuring graceful rendering even without explicit controller payload injections.
+
+### 3. 🔍 Multi-Field Catalogue Keyword Search
+- **Instant Search Bar:** Integrated into the workshop catalogue filter bar.
+- Supports simultaneous partial matching (`LIKE %term%`) across:
+  - Workshop Title (e.g., *Pottery*, *Welding*)
+  - Unique Workshop Code (e.g., *WS-POT-01*)
+  - Instructor Name (e.g., *Sarah Connor*)
+- Seamlessly combines with existing date-range, status, campus location, and available-seat filters.
+
+### 4. 👤 Administrative Role & Account Management
+- **Role Re-assignment & User Updates:** System Administrators can edit existing staff account details and switch operational roles (`Admin`, `Manager`, `Staff`) on demand.
+- **Audited Role Changes:** Any modification to staff roles or email accounts is captured with an atomic audit entry (`USER_ROLE_UPDATED`), recording the administrator's identity, timestamp, and a before/after diff of the affected role.
+
 ## 🚀 Local Installation & Setup
 
 ### 1. Clone the Repository
