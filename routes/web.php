@@ -37,6 +37,7 @@ Route::middleware([
     Route::middleware(['role:manager|staff'])->group(function () {
         Route::get('/workshops', [WorkshopController::class, 'index'])->name('workshops.index');
         Route::get('/workshops/{workshop}', [WorkshopController::class, 'show'])->name('workshops.show');
+        Route::get('/workshops/{workshop}/export-attendees', [WorkshopController::class, 'exportAttendees'])->name('workshops.export_attendees');
 
         // Attendee Registration & Cancellation
         Route::post('/workshops/{workshop}/registrations', [RegistrationController::class, 'store'])

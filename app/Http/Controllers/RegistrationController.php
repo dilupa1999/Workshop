@@ -11,9 +11,7 @@ use Illuminate\Validation\ValidationException;
 
 class RegistrationController extends Controller
 {
-    /**
-     * Register attendee or queue into waitlist if capacity is reached.
-     */
+    
     public function store(Request $request, Workshop $workshop)
     {
         $validated = $request->validate([

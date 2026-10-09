@@ -26,11 +26,15 @@
                 </div>
             @endif
 
-            <!-- 1. Workshop Overview Card -->
-            <div class="bg-white p-6 rounded-lg shadow grid grid-cols-2 md:grid-cols-5 gap-4">
+            <!-- 1. Workshop Overview Card (Updated to 6 columns to include Location) -->
+            <div class="bg-white p-6 rounded-lg shadow grid grid-cols-2 md:grid-cols-6 gap-4">
                 <div>
                     <span class="text-xs text-gray-500 uppercase font-semibold">Instructor</span>
                     <p class="text-base font-bold text-gray-800">{{ $workshop->instructor }}</p>
+                </div>
+                <div>
+                    <span class="text-xs text-gray-500 uppercase font-semibold">Campus Location</span>
+                    <p class="text-base font-bold text-indigo-700">📍 {{ $workshop->location ?? 'Central Campus' }}</p>
                 </div>
                 <div>
                     <span class="text-xs text-gray-500 uppercase font-semibold">Date & Time</span>
@@ -98,10 +102,14 @@
                 @error('capacity') <p class="text-sm text-red-600 mt-2">{{ $message }}</p> @enderror
             </div>
 
-            <!-- 3. Registrations, Waitlist & Cancellation History -->
+            <!-- 3. Registrations, Waitlist & Cancellation History (Includes CSV Export) -->
             <div class="bg-white rounded-lg shadow overflow-hidden">
                 <div class="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
                     <h3 class="text-lg font-bold text-gray-800">Registration History & Audit Trail</h3>
+                    {{-- CSV Export Button for Front Desk & Management --}}
+                    <a href="{{ route('workshops.export_attendees', $workshop) }}" class="inline-flex items-center px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-md shadow transition">
+                        📥 Export Attendee List (CSV)
+                    </a>
                 </div>
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase">

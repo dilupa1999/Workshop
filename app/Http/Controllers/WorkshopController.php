@@ -122,4 +122,52 @@ class WorkshopController extends Controller
 
         return redirect()->route('workshops.show', $workshop)->with('success', 'Workshop updated successfully.');
     }
+
+
+public function exportAttendees(Workshop $workshop)
+{
+    $fileName = 'attendees-' . \Illuminate\Support\Str::slug($workshop->code) . '-' . now()->format('Ymd_His') . '.csv';
+
+    $registrations = $workshop->registrations()
+        ->with(['registeredByUser', 'cancelledByUser'])
+        ->orderBy('created_at', 'asc')
+        ->get();
+
+    $headers = [
+        "Content-type"        => "text/csv",
+        "Content-Disposition" => "attachment; filename=$fileName",
+        "Pragma"              => "no-cache",
+        "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+        "Expires"             => "0"
+    ];
+
+    $callback = function () use ($registrations, $workshop) {
+        $file = fopen('php://output', 'w');
+        // CSV Header
+        fputcsv($file, ['Workshop Code', 'Workshop Title', 'Attendee Name', 'Attendee Email', 'Status', 'Registered At', 'Registered By', 'Cancellation Details']);
+
+        foreach ($registrations as $reg) {
+            fputcsv($file, [
+                $workshop->code,
+                $workshop->title,
+                $reg->attendee_name,
+                $reg->attendee_email,
+                ucfirst($reg->status),
+                $reg->created_at->format('Y-m-d H:i:s'),
+                $reg->registeredByUser->name ?? 'System',
+                $reg->status === 'cancelled' 
+                    ? ('Cancelled by ' . ($reg->cancelledByUser->name ?? 'Unknown') . ' on ' . ($reg->cancelled_at?->format('Y-m-d H:i') ?? 'N/A')) 
+                    : 'N/A'
+            ]);
+        }
+
+        fclose($file);
+    };
+
+    return response()->stream($callback, 200, $headers);
+}
+
+
+
+
 }
