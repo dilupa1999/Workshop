@@ -30,6 +30,19 @@
                         @error('instructor') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
                     </div>
 
+                    {{-- Location Dropdown (Pre-selects current workshop location) --}}
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700">Location (Branch / Centre)</label>
+                        <select name="location" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            @foreach(['Central Campus', 'North Branch', 'South Centre'] as $loc)
+                                <option value="{{ $loc }}" {{ old('location', $workshop->location ?? '') == $loc ? 'selected' : '' }}>
+                                    {{ $loc }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('location') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                    </div>
+
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700">Date & Time</label>
                         <input type="datetime-local" name="date_time" value="{{ old('date_time', $workshop->date_time->format('Y-m-d\TH:i')) }}" required class="mt-1 block w-full rounded-md border-gray-300">
@@ -51,6 +64,7 @@
                                 </option>
                             @endforeach
                         </select>
+                        @error('status') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
                     </div>
 
                     <div class="flex justify-end gap-3">

@@ -28,6 +28,20 @@
                         @error('instructor') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
                     </div>
 
+                    {{-- Location Dropdown (Added for 3 Locations) --}}
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700">Location (Branch / Centre)</label>
+                        <select name="location" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <option value="">Select Location...</option>
+                            @foreach(['Central Campus', 'North Branch', 'South Centre'] as $loc)
+                                <option value="{{ $loc }}" {{ old('location') == $loc ? 'selected' : '' }}>
+                                    {{ $loc }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('location') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                    </div>
+
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700">Date & Time</label>
                         <input type="datetime-local" name="date_time" value="{{ old('date_time') }}" required class="mt-1 block w-full rounded-md border-gray-300">
@@ -43,11 +57,12 @@
                     <div class="mb-6">
                         <label class="block text-sm font-medium text-gray-700">Status</label>
                         <select name="status" class="mt-1 block w-full rounded-md border-gray-300">
-                            <option value="scheduled">Scheduled</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
+                            <option value="scheduled" {{ old('status') == 'scheduled' ? 'selected' : '' }}>Scheduled</option>
+                            <option value="in_progress" {{ old('status') == 'in_progress' ? 'selected' : '' }}>In Progress</option>
+                            <option value="completed" {{ old('status') == 'completed' ? 'selected' : '' }}>Completed</option>
+                            <option value="cancelled" {{ old('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                         </select>
+                        @error('status') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
                     </div>
 
                     <div class="flex justify-end gap-3">

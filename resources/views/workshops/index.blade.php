@@ -18,9 +18,9 @@
                 <div class="p-4 bg-green-100 text-green-800 rounded-md">{{ session('success') }}</div>
             @endif
 
-            <!-- Search & Filters -->
+            <!-- Search & Filters (Updated to 5 columns for Location) -->
             <div class="bg-white p-6 rounded-lg shadow">
-                <form method="GET" action="{{ route('workshops.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <form method="GET" action="{{ route('workshops.index') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 uppercase">Start Date</label>
                         <input type="date" name="start_date" value="{{ request('start_date') }}" class="mt-1 w-full rounded-md border-gray-300 text-sm">
@@ -39,6 +39,20 @@
                             <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                         </select>
                     </div>
+
+                    {{-- Location Filter (Newly Added) --}}
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase">Location</label>
+                        <select name="location" class="mt-1 w-full rounded-md border-gray-300 text-sm">
+                            <option value="">All Locations</option>
+                            @foreach(['Central Campus', 'North Branch', 'South Centre'] as $loc)
+                                <option value="{{ $loc }}" {{ request('location') == $loc ? 'selected' : '' }}>
+                                    {{ $loc }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
                     <div class="flex items-center gap-3">
                         <label class="inline-flex items-center">
                             <input type="checkbox" name="available_only" value="1" {{ request('available_only') ? 'checked' : '' }} class="rounded border-gray-300 text-indigo-600 shadow-sm">
@@ -55,7 +69,7 @@
                     <thead class="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase">
                         <tr>
                             <th class="px-6 py-3">Code & Title</th>
-                            <th class="px-6 py-3">Instructor</th>
+                            <th class="px-6 py-3">Instructor & Location</th>
                             <th class="px-6 py-3">Date & Time</th>
                             <th class="px-6 py-3">Capacity & Seats</th>
                             <th class="px-6 py-3">Status</th>
@@ -72,7 +86,13 @@
                                     <span class="font-bold text-gray-900 block">{{ $workshop->title }}</span>
                                     <span class="text-xs text-gray-500 font-mono">{{ $workshop->code }}</span>
                                 </td>
-                                <td class="px-6 py-4 text-gray-600">{{ $workshop->instructor }}</td>
+                                <td class="px-6 py-4 text-gray-600">
+                                    <span class="font-medium text-gray-800 block">{{ $workshop->instructor }}</span>
+                                    {{-- Location Badge --}}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-gray-100 text-gray-700 mt-1">
+                                        📍 {{ $workshop->location ?? 'Central Campus' }}
+                                    </span>
+                                </td>
                                 <td class="px-6 py-4 text-gray-600">{{ $workshop->date_time->format('M d, Y h:i A') }}</td>
                                 <td class="px-6 py-4">
                                     <span class="font-semibold {{ $remaining > 0 ? 'text-green-600' : 'text-red-600' }}">

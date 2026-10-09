@@ -25,7 +25,12 @@ class WorkshopController extends Controller
             $query->whereDate('date_time', '<=', $request->end_date);
         }
 
-        // 3. Filter by Available Seats
+        // 3. Filter by Location (Newly Added)
+        if ($request->filled('location')) {
+            $query->where('location', $request->location);
+        }
+
+        // 4. Filter by Available Seats
         if ($request->boolean('available_only')) {
             $query->havingRaw('capacity > active_registrations_count');
         }
@@ -46,6 +51,7 @@ class WorkshopController extends Controller
             'code' => ['required', 'string', 'max:50', 'unique:workshops,code'],
             'title' => ['required', 'string', 'max:255'],
             'instructor' => ['required', 'string', 'max:255'],
+            'location' => ['required', 'string', 'max:100'], // Newly Added
             'date_time' => ['required', 'date', 'after:now'],
             'capacity' => ['required', 'integer', 'min:1'],
             'status' => ['required', 'in:scheduled,in_progress,completed,cancelled'],
@@ -87,6 +93,7 @@ class WorkshopController extends Controller
             'code' => ['required', 'string', 'max:50', 'unique:workshops,code,' . $workshop->id],
             'title' => ['required', 'string', 'max:255'],
             'instructor' => ['required', 'string', 'max:255'],
+            'location' => ['required', 'string', 'max:100'], // Newly Added
             'date_time' => ['required', 'date'],
             'capacity' => ['required', 'integer', 'min:1'],
             'status' => ['required', 'in:scheduled,in_progress,completed,cancelled'],

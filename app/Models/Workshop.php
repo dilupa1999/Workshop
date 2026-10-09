@@ -14,6 +14,7 @@ class Workshop extends Model
         'code',
         'title',
         'instructor',
+        'location',
         'date_time',
         'capacity',
         'status',
