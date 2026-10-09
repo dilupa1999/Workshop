@@ -21,11 +21,15 @@ Route::middleware([
     // -------------------------------------------------------------------------
     // 1. ADMIN ONLY: Manage Users & Roles (Workshops are forbidden)
     // -------------------------------------------------------------------------
-    Route::middleware(['role:admin'])->prefix('admin')->name('users.')->group(function () {
-        Route::get('/users', [UserController::class, 'index'])->name('index');
-        Route::get('/users/create', [UserController::class, 'create'])->name('create');
-        Route::post('/users', [UserController::class, 'store'])->name('store');
-    });
+   Route::middleware(['role:admin'])->prefix('admin')->name('users.')->group(function () {
+    Route::get('/users', [UserController::class, 'index'])->name('index');
+    Route::get('/users/create', [UserController::class, 'create'])->name('create');
+    Route::post('/users', [UserController::class, 'store'])->name('store');
+    
+    // Edit & Update routes for Admin
+    Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('edit');
+    Route::put('/users/{user}', [UserController::class, 'update'])->name('update');
+});
 
     // -------------------------------------------------------------------------
     // 2. MANAGER & STAFF: View Workshops, Registrations, & Cancel Attendees

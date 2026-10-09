@@ -38,6 +38,11 @@
                                     </span>
                                 </td>
                                 <td class="py-3 text-gray-500">{{ $user->created_at->format('Y-m-d') }}</td>
+                                <td class="px-6 py-4 text-right">
+    <a href="{{ route('users.edit', $user) }}" class="text-xs font-semibold text-indigo-600 hover:text-indigo-900">
+        Edit Role &rarr;
+    </a>
+</td>
                             </tr>
                         @endforeach
                     </tbody>
